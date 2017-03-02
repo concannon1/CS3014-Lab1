@@ -1,0 +1,23 @@
+<html>
+<head>CS3014-Lab1</head>
+
+<h1>Pls do not read source code as it is</h1>
+<pre>
+ _____ ___  ____    ____  _____ ____ ____  _____ _____ 
+|_   _/ _ \|  _ \  / ___|| ____/ ___|  _ \| ____|_   _|
+  | || | | | |_) \ \___ \|  _|| |   | |_) |  _|   | |
+  | || |_| |  __/   ___) | |__| |___|  _ <| |___  | |
+  |_| \___/|_|     |____/|_____\____|_| \_\_____| |_|
+
+</pre>
+<body>
+<br>
+<strong>compiling:</strong>
+	gcc -O3 -fopenmp -o a conv-harness.c
+<br>
+<strong>exectuting:</strong> 
+currently testing with width=10, height=10, kernel order=3, number of channels=5, number of kernels=3
+<br>
+ergo execute with <i>./a 10 10 3 5 3</i>
+</body>
+</html>
