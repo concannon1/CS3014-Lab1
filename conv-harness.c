@@ -31,9 +31,9 @@
 /* the following two definitions of DEBUGGING control whether or not
    debugging information is written out. To put the program into
    debugging mode, uncomment the following line: */
-#define DEBUGGING(_x) _x
+//#define DEBUGGING(_x) _x
 /* to stop the printing of debugging information, use the following line: */
-//#define DEBUGGING(_x)
+#define DEBUGGING(_x)
 
 
 /* write 3d matrix to stdout */
@@ -223,6 +223,8 @@ void team_conv(float *** image, float **** kernels, float *** output,
 /*Our version*/
 
 int h, w,x, y, c, m;
+float sum;
+float sum2;
 
   for ( m = 0; m < nkernels; m++ ) {
 	for ( w = 0; w < width; w++ ) {
@@ -230,8 +232,8 @@ int h, w,x, y, c, m;
 	  for ( h = 0; h < height; h+=2 ) {
 		//do the thing in the slides where you reduce number of memory accesses
 		//gives diminishing returns though
-		float sum = 0.0;
-		float sum2 = 0.0;
+		 sum = 0.0;
+	     sum2 = 0.0;
 
 		for ( c = 0; c < nchannels; c++ ) {
 		  for ( x = 0; x < kernel_order; x++) {
