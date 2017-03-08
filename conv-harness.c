@@ -27,13 +27,14 @@
 #include <assert.h>
 #include <omp.h>
 #include <math.h>
+#include<x86intrin.h>
 
 /* the following two definitions of DEBUGGING control whether or not
    debugging information is written out. To put the program into
    debugging mode, uncomment the following line: */
-#define DEBUGGING(_x) _x
+//#define DEBUGGING(_x) _x
 /* to stop the printing of debugging information, use the following line: */
-//#define DEBUGGING(_x)
+#define DEBUGGING(_x)
 
 
 /* write 3d matrix to stdout */
@@ -222,27 +223,62 @@ void team_conv(float *** image, float **** kernels, float *** output,
 {
 /*Our version*/
 
-int h, w,x, y, c, m;
 
+
+
+//GET MAXIMUM NUMBER OF THREADS POSSIBLE
+/*int number_of_threads = omp_get_num_threads();
+int sumArr[number_of_threads];
+int sumArr2[number_of_threads];
+int f;
+#pragma omp parallel for
+for(f = 0; f < number_of_threads; f++){
+	sumArr[f] = 0;
+	sumArr2[f] = 0;
+}
+*/
+
+
+int h, w, x, y, c, m;
   for ( m = 0; m < nkernels; m++ ) {
+
 	for ( w = 0; w < width; w++ ) {
-	
-	  for ( h = 0; h < height; h+=2 ) {
+
+	  for ( h = 0; h < height; h+=4) {
+
 		//do the thing in the slides where you reduce number of memory accesses
 		//gives diminishing returns though
-		float sum = 0.0;
-		float sum2 = 0.0;
+//		float sum = 0.0;
+		__m128 sumVector = {0.0, 0.0, 0.0, 0.0};
 
 		for ( c = 0; c < nchannels; c++ ) {
-		  for ( x = 0; x < kernel_order; x++) {
-			for ( y = 0; y < kernel_order; y++ ) {
-			  sum += image[w+x][h+y][c] * kernels[m][c][x][y];
-			  sum2 += image[w+x][h+1+y][c] * kernels[m][c][x][y];
 
+		  for ( x = 0; x < kernel_order; x++) {
+			
+			for ( y = 0; y < kernel_order; y+=1) {
+				//create a vector from the image matrix
+				float  iv[] = {image[w+x][h+y][c], image[w+x][h+y+1][c], image[w+x][h+y+2][c], image[w+x][h+y+3][c]};
+				__m128 imageVector = _mm_loadu_ps(iv);
+
+				//create a vector from the kernel matrix
+				float kv[] = {kernels[m][c][x][y], kernels[m][c][x][y], kernels[m][c][x][y], kernels[m][c][x][y]};
+				__m128 kernelsVector = _mm_loadu_ps(kv);
+				
+				//multiply the two vectors (8 floats being multiplied together at once)
+				__m128 product = _mm_mul_ps(imageVector, kernelsVector);
+
+				//add the product to a running total
+				sumVector = _mm_add_ps(sumVector, product);
 			}
+			
 		  }
-		  output[m][w][h] = sum;
-		  output[m][w][h+1]=sum2;
+		  float sum[4];
+		  _mm_storeu_ps(sum, sumVector);
+		  int i;
+
+		  for(i = 0; i <  4; i++)
+			  output[m][w][h+i] = sum[i];
+
 
 		}
 	  }
