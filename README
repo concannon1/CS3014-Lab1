@@ -13,8 +13,12 @@
 <body>
 <br>
 <strong>compiling:</strong>
-	gcc -O3 -fopenmp -o a conv-harness.c
 <br>
+With openmp: gcc -O3 -fopenmp -o a conv-harness.c
+<br>
+With m128 vector things: gcc -O3 -msse4 -o a conv-harness.c
+<br><br>
+
 <strong>exectuting:</strong> 
 currently testing with width=10, height=10, kernel order=3, number of channels=5, number of kernels=3
 <br>
