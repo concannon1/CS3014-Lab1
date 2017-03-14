@@ -239,6 +239,7 @@ float sum2;
 		  for ( x = 0; x < kernel_order; x++) {
 			
 			for ( y = 0; y < kernel_order; y++ ) {
+					
 					  sum += image[w+x][h+y][c] * kernels[m][c][x][y];
 					  sum2 += image[w+x][h+1+y][c] * kernels[m][c][x][y];
 			}
