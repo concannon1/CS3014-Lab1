@@ -226,7 +226,7 @@ int h, w,x, y, c, m;
 
   for ( m = 0; m < nkernels; m++ ) {
 	for ( w = 0; w < width; w++ ) {
-	
+	#pragma omp parallel for private(sum, sum2, c, x, y)
 	  for ( h = 0; h < height; h+=2 ) {
 		//do the thing in the slides where you reduce number of memory accesses
 		//gives diminishing returns though
