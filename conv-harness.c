@@ -222,34 +222,66 @@ void team_conv(float *** image, float **** kernels, float *** output,
 {
 /*Our version*/
 
-int h, w,x, y, c, m;
-float sum;
-float sum2;
-
-  for ( m = 0; m < nkernels; m++ ) {
-	for ( w = 0; w < width; w++ ) {
-	#pragma omp parallel for private(sum, sum2, c, x, y)
-	  for ( h = 0; h < height; h+=2 ) {
+int h1, h2, w1, w2,x1, x2, y1, y2, c1, c2, m1, m2;
+int nkernelsover2 = nkernels / 2;
+float sum, sum2, sum3, sum4;
+#pragma omp sections
+{
+#pragma omp section
+{
+  for ( m1 = 0; m1 < nkernelsover2; m1++ ) {
+	for ( w1 = 0; w1 < width; w1++ ) {
+	
+	  for ( h1 = 0; h1 < height; h1+=2 ) {
 		//do the thing in the slides where you reduce number of memory accesses
 		//gives diminishing returns though
 		 sum = 0.0;
 	     sum2 = 0.0;
 
-		for ( c = 0; c < nchannels; c++ ) {
-		  for ( x = 0; x < kernel_order; x++) {
-			for ( y = 0; y < kernel_order; y++ ) {
-			  sum += image[w+x][h+y][c] * kernels[m][c][x][y];
-			  sum2 += image[w+x][h+1+y][c] * kernels[m][c][x][y];
+		for ( c1 = 0; c1 < nchannels; c1++ ) {
+		  for ( x1 = 0; x1 < kernel_order; x1++) {
+			for ( y1 = 0; y1 < kernel_order; y1++ ) {
+			  sum += image[w1+x1][h1+y1][c1] * kernels[m1][c1][x1][y1];
+			  sum2 += image[w1+x1][h1+1+y1][c1] * kernels[m1][c1][x1][y1];
 
 			}
 		  }
-		  output[m][w][h] = sum;
-		  output[m][w][h+1]=sum2;
+		  output[m1][w1][h1] = sum;
+		  output[m1][w1][h1+1]=sum2;
 
 		}
 	  }
 	}
   }
+}
+#pragma omp section
+{
+for ( m2 = nkernelsover2; m2 < nkernels; m2++ ) {
+	for ( w2 = 0; w2 < width; w2++ ) {
+	
+	  for ( h2 = 0; h2 < height; h2+=2 ) {
+		//do the thing in the slides where you reduce number of memory accesses
+		//gives diminishing returns though
+		 sum = 0.0;
+	     sum2 = 0.0;
+
+		for ( c2 = 0; c2 < nchannels; c2++ ) {
+		  for ( x2 = 0; x2 < kernel_order; x2++) {
+			for ( y2 = 0; y2 < kernel_order; y2++ ) {
+			  sum += image[w2+x2][h2+y2][c2] * kernels[m2][c2][x2][y2];
+			  sum2 += image[w2+x2][h2+1+y2][c2] * kernels[m2][c2][x2][y2];
+
+			}
+		  }
+		  output[m2][w2][h2] = sum;
+		  output[m2][w2][h2+1]=sum2;
+
+		}
+	  }
+	}
+  }
+}
+}//sections
 //D-Gregg's version
 //multichannel_conv(image, kernels, output, width, height, nchannels, nkernels, kernel_order);
 }
@@ -298,9 +330,17 @@ int main(int argc, char ** argv)
 
   //DEBUGGING(write_out(A, a_dim1, a_dim2));
 
+	
+	gettimeofday(&start_time, NULL);
 	/* use a simple multichannel convolution routine to produce control result */
 	multichannel_conv(image, kernels, control_output, width,
 					height, nchannels, nkernels, kernel_order);
+
+	/* record finishing time */
+	gettimeofday(&stop_time, NULL);
+	mul_time = (stop_time.tv_sec - start_time.tv_sec) * 1000000L +
+	(stop_time.tv_usec - start_time.tv_usec);
+	printf("Davids's conv time: %lld microseconds\n", mul_time);
 
 	/* record starting time of team's code*/
 	gettimeofday(&start_time, NULL);
