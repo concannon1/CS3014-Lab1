@@ -262,19 +262,19 @@ for ( m2 = nkernelsover2; m2 < nkernels; m2++ ) {
 	  for ( h2 = 0; h2 < height; h2+=2 ) {
 		//do the thing in the slides where you reduce number of memory accesses
 		//gives diminishing returns though
-		 sum = 0.0;
-	     sum2 = 0.0;
+		 sum3 = 0.0;
+	     sum4 = 0.0;
 
 		for ( c2 = 0; c2 < nchannels; c2++ ) {
 		  for ( x2 = 0; x2 < kernel_order; x2++) {
 			for ( y2 = 0; y2 < kernel_order; y2++ ) {
-			  sum += image[w2+x2][h2+y2][c2] * kernels[m2][c2][x2][y2];
-			  sum2 += image[w2+x2][h2+1+y2][c2] * kernels[m2][c2][x2][y2];
+			  sum3 += image[w2+x2][h2+y2][c2] * kernels[m2][c2][x2][y2];
+			  sum4 += image[w2+x2][h2+1+y2][c2] * kernels[m2][c2][x2][y2];
 
 			}
 		  }
-		  output[m2][w2][h2] = sum;
-		  output[m2][w2][h2+1]=sum2;
+		  output[m2][w2][h2] = sum3;
+		  output[m2][w2][h2+1]=sum4;
 
 		}
 	  }
