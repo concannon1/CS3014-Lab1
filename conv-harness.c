@@ -225,21 +225,8 @@ void team_conv(float *** image, float **** kernels, float *** output,
 
 
 
-
-//GET MAXIMUM NUMBER OF THREADS POSSIBLE
-/*int number_of_threads = omp_get_num_threads();
-int sumArr[number_of_threads];
-int sumArr2[number_of_threads];
-int f;
-#pragma omp parallel for
-for(f = 0; f < number_of_threads; f++){
-	sumArr[f] = 0;
-	sumArr2[f] = 0;
-}
-*/
-
-
 int h, w, x, y, c, m;
+#pragma omp parallel for private(m, w, h, c, x, y)
   for ( m = 0; m < nkernels; m++ ) {
 
 	for ( w = 0; w < width; w++ ) {
@@ -275,7 +262,7 @@ int h, w, x, y, c, m;
 		  float sum[4];
 		  _mm_storeu_ps(sum, sumVector);
 		  int i;
-
+		#pragma omp parallel for
 		  for(i = 0; i <  4; i++)
 			  output[m][w][h+i] = sum[i];
 
@@ -332,9 +319,18 @@ int main(int argc, char ** argv)
 
   //DEBUGGING(write_out(A, a_dim1, a_dim2));
 
+	/* record starting time of David's code*/
+	gettimeofday(&start_time, NULL);
 	/* use a simple multichannel convolution routine to produce control result */
 	multichannel_conv(image, kernels, control_output, width,
 					height, nchannels, nkernels, kernel_order);
+	/* record finishing time */
+	gettimeofday(&stop_time, NULL);
+	mul_time = (stop_time.tv_sec - start_time.tv_sec) * 1000000L +
+	(stop_time.tv_usec - start_time.tv_usec);
+	printf("David's conv time: %lld microseconds\n", mul_time);
+	
+	long long daveTime = mul_time;
 
 	/* record starting time of team's code*/
 	gettimeofday(&start_time, NULL);
@@ -348,7 +344,9 @@ int main(int argc, char ** argv)
 	mul_time = (stop_time.tv_sec - start_time.tv_sec) * 1000000L +
 	(stop_time.tv_usec - start_time.tv_usec);
 	printf("Team conv time: %lld microseconds\n", mul_time);
-
+	long long teamTime = mul_time;
+	float dif = daveTime / teamTime;
+	printf("our implementation took %f of the time of the unoptimised one\n", dif * 100);
 	DEBUGGING(write_out(output, nkernels, width, height));
 
 	/* now check that the team's multichannel convolution routine
