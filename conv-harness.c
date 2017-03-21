@@ -259,7 +259,7 @@ void team_conv(float *** image, float **** kernels, float *** output,
 {
 /*Our version*/
 
-if(width < 50) team_conv_not_parallel(image, kernels, output, width, height, nchannels, nkernels, kernel_order);
+if(width < 50 || nchannels || 4 || nkernels || 4 || kernel_order < 4) team_conv_not_parallel(image, kernels, output, width, height, nchannels, nkernels, kernel_order);
 else{
 
 int h, w,x, y, c, m;
