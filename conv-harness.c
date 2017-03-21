@@ -214,13 +214,12 @@ void multichannel_conv(float *** image, float **** kernels, float *** output,
     }
   }
 }
-
-/* the fast version of matmul written by the team */
-void team_conv(float *** image, float **** kernels, float *** output,
+/*Our version that is not parallelized*/
+void team_conv_not_parallel(float *** image, float **** kernels, float *** output,
 			   int width, int height, int nchannels, int nkernels,
 			   int kernel_order)
 {
-/*Our version*/
+
 
 int h, w,x, y, c, m;
 float sum;
@@ -228,7 +227,6 @@ float sum2;
 
   for ( m = 0; m < nkernels; m++ ) {
 	for ( w = 0; w < width; w++ ) {
-	#pragma omp parallel for private(sum, sum2, c, x, y)
 	  for ( h = 0; h < height; h+=2 ) {
 		//do the thing in the slides where you reduce number of memory accesses
 		//gives diminishing returns though
@@ -250,9 +248,52 @@ float sum2;
 	  }
 	}
   }
-//D-Gregg's version
-//multichannel_conv(image, kernels, output, width, height, nchannels, nkernels, kernel_order);
+
+
 }
+
+/* the fast version of matmul written by the team */
+void team_conv(float *** image, float **** kernels, float *** output,
+			   int width, int height, int nchannels, int nkernels,
+			   int kernel_order)
+{
+/*Our version*/
+
+if(width < 50) team_conv_not_parallel(image, kernels, output, width, height, nchannels, nkernels, kernel_order);
+else{
+
+int h, w,x, y, c, m;
+float sum;
+float sum2;
+
+#pragma omp parallel for private(h, w, x, y, c, m, sum, sum2)
+  for ( m = 0; m < nkernels; m++ ) {
+	for ( w = 0; w < width; w++ ) {
+	  for ( h = 0; h < height; h+=2 ) {
+		//do the thing in the slides where you reduce number of memory accesses
+		//gives diminishing returns though
+		 sum = 0.0;
+	     sum2 = 0.0;
+
+		for ( c = 0; c < nchannels; c++ ) {
+		  for ( x = 0; x < kernel_order; x++) {
+			for ( y = 0; y < kernel_order; y++ ) {
+			  sum += image[w+x][h+y][c] * kernels[m][c][x][y];
+			  sum2 += image[w+x][h+1+y][c] * kernels[m][c][x][y];
+
+			}
+		  }
+		  output[m][w][h] = sum;
+		  output[m][w][h+1]=sum2;
+
+		}
+	  }
+	}
+  }
+
+}
+}
+
 
 int main(int argc, char ** argv)
 {
@@ -298,9 +339,18 @@ int main(int argc, char ** argv)
 
   //DEBUGGING(write_out(A, a_dim1, a_dim2));
 
+	/* record starting time of David's code*/
+	gettimeofday(&start_time, NULL);
 	/* use a simple multichannel convolution routine to produce control result */
 	multichannel_conv(image, kernels, control_output, width,
 					height, nchannels, nkernels, kernel_order);
+	/* record finishing time */
+	gettimeofday(&stop_time, NULL);
+	mul_time = (stop_time.tv_sec - start_time.tv_sec) * 1000000L +
+	(stop_time.tv_usec - start_time.tv_usec);
+	printf("David's conv time: %lld microseconds\n", mul_time);
+
+	long long davidsTime = mul_time;
 
 	/* record starting time of team's code*/
 	gettimeofday(&start_time, NULL);
@@ -314,6 +364,12 @@ int main(int argc, char ** argv)
 	mul_time = (stop_time.tv_sec - start_time.tv_sec) * 1000000L +
 	(stop_time.tv_usec - start_time.tv_usec);
 	printf("Team conv time: %lld microseconds\n", mul_time);
+
+	long long teamsTime = mul_time;
+	
+	long long factor = davidsTime / teamsTime;
+	
+	if(factor!=0) printf("Your implementation is between %lld and %lld times faster\n", factor, factor+1);
 
 	DEBUGGING(write_out(output, nkernels, width, height));
 
