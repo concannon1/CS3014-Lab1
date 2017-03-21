@@ -27,6 +27,7 @@
 #include <assert.h>
 #include <omp.h>
 #include <math.h>
+#include <x86intrin.h>
 
 /* the following two definitions of DEBUGGING control whether or not
    debugging information is written out. To put the program into
@@ -222,27 +223,48 @@ void team_conv_not_parallel(float *** image, float **** kernels, float *** outpu
 
 
 int h, w,x, y, c, m;
-float sum;
-float sum2;
+__m128 sumVector, imageVector, kernelsVector, product;
+float iv[4], kv[4];
+
 
   for ( m = 0; m < nkernels; m++ ) {
 	for ( w = 0; w < width; w++ ) {
-	  for ( h = 0; h < height; h+=2 ) {
+	  for ( h = 0; h < height; h+=4 ) {
 		//do the thing in the slides where you reduce number of memory accesses
 		//gives diminishing returns though
-		 sum = 0.0;
-	     sum2 = 0.0;
+		 sumVector = _mm_setzero_ps();
 
 		for ( c = 0; c < nchannels; c++ ) {
 		  for ( x = 0; x < kernel_order; x++) {
 			for ( y = 0; y < kernel_order; y++ ) {
-			  sum += image[w+x][h+y][c] * kernels[m][c][x][y];
-			  sum2 += image[w+x][h+1+y][c] * kernels[m][c][x][y];
+
+			//create a vector from the image matrix
+	 		  	iv[0] = image[w+x][h+y][c]; 
+				iv[1] = image[w+x][h+y+1][c];
+				iv[2] =	image[w+x][h+y+2][c]; 
+				iv[3] = image[w+x][h+y+3][c];
+
+				imageVector = _mm_loadu_ps(iv);
+
+			//create a vector from the kernel matrix
+				kv[0] = kernels[m][c][x][y];
+				kv[1] =	kernels[m][c][x][y];
+				kv[2] =	kernels[m][c][x][y];
+				kv[3] =	kernels[m][c][x][y];
+				kernelsVector = _mm_loadu_ps(kv);
+			//multiply the two vectors (8 floats being multiplied together at once)
+				product = _mm_mul_ps(imageVector, kernelsVector);
+
+				//add the product to a running total
+				sumVector = _mm_add_ps(sumVector, product);
 
 			}
 		  }
-		  output[m][w][h] = sum;
-		  output[m][w][h+1]=sum2;
+		  float sum[4];
+		  _mm_storeu_ps(sum, sumVector);
+		  int i;
+		  for(i = 0; i <  4; i++)
+			  output[m][w][h+i] = sum[i];
 
 		}
 	  }
