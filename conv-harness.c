@@ -277,11 +277,13 @@ float sum2;
 
 		for ( c = 0; c < nchannels; c++ ) {
 		  for ( x = 0; x < kernel_order; x++) {
+			
 			for ( y = 0; y < kernel_order; y++ ) {
-			  sum += image[w+x][h+y][c] * kernels[m][c][x][y];
-			  sum2 += image[w+x][h+1+y][c] * kernels[m][c][x][y];
-
+					
+					  sum += image[w+x][h+y][c] * kernels[m][c][x][y];
+					  sum2 += image[w+x][h+1+y][c] * kernels[m][c][x][y];
 			}
+			
 		  }
 		  output[m][w][h] = sum;
 		  output[m][w][h+1]=sum2;
@@ -289,6 +291,7 @@ float sum2;
 		}
 	  }
 	}
+  
   }
 
 }
