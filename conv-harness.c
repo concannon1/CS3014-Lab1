@@ -221,7 +221,7 @@ void team_conv_not_parallel(float *** image, float **** kernels, float *** outpu
 			   int kernel_order)
 {
 
-
+printf("in non parallel version\n");
 int h, w,x, y, c, m;
 register float sum;
 register float sum2;
@@ -370,7 +370,7 @@ float iv[4];
 }
 else if(height % 2 == 0){
 
-
+printf("in parallel with 2 sums\n");
 int h, w,x, y, c, m;
 register float sum;
 register float sum2;
@@ -407,13 +407,11 @@ register float sum2;
 else{
 int h, w,x, y, c, m;
 register float sum;
-
+printf("in parallel with 1 sum\n");
 #pragma omp parallel for private(h, w, x, y, c, m, sum)
   for ( m = 0; m < nkernels; m++ ) {
 	for ( w = 0; w < width; w++ ) {
 	  for ( h = 0; h < height; h++ ) {
-		//do the thing in the slides where you reduce number of memory accesses
-		//gives diminishing returns though
 		 sum = 0.0;
 
 
