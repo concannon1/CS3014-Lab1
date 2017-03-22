@@ -255,54 +255,6 @@ register float sum2;
 
 }
 
-void superFastPart2(float *** image, float **** kernels, float *** output,
-			   int width, int height, int nchannels,
-			   int kernel_order, int m){
-	int h, w,x, y, c;
-	float sum1, sum2, sum3, sum4;
-	for ( w = 0; w < width; w++ ) {
-	  for ( h = 0; h < height; h+4 ) {
-		//do the thing in the slides where you reduce number of memory accesses
-		//gives diminishing returns though
-		 sum1 = 0.0; sum2 = 0.0; sum3 = 0.0; sum4 = 0.0;
-
-
-		for ( c = 0; c < nchannels; c++ ) {
-			for ( x = 0; x < kernel_order; x++) {	
-				for ( y = 0; y < kernel_order; y++ ) {
-					
-					sum1 += image[w+x][h+y][c] * kernels[m][c][x][y];
-					sum2 += image[w+x][h+y+1][c] * kernels[m][c][x][y];
-					sum3 += image[w+x][h+y+2][c] * kernels[m][c][x][y];
-					sum4 += image[w+x][h+y+3][c] * kernels[m][c][x][y];
-	
-				}
-				
-			}
-		output[m][w][h] = sum1;
-		output[m][w][h+1] = sum2;
-		output[m][w][h+2] = sum3;
-		output[m][w][h+3] = sum4;
-
-		}
-	  }
-	}
-  
-  
-
-}
-
-void superFast(float *** image, float **** kernels, float *** output,
-			   int width, int height, int nchannels, int nkernels,
-			   int kernel_order){
-	int m;
-	#pragma omp parallel for
-	for(m = 0; m < nkernels; m++){
-		superFastPart2(image, kernels, output, width, height, nchannels, kernel_order, m);
-	}
-
-
-}
 
 
 /* the fast version of matmul written by the team */
@@ -366,7 +318,7 @@ float iv[4];
 	}
   }
 
-//superFast(image, kernels, output, width, height, nchannels, nkernels, kernel_order);
+
 }
 else if(height % 2 == 0){
 
