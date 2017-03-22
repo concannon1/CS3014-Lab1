@@ -231,8 +231,7 @@ register float sum2;
 	  for ( h = 0; h < height; h+=2 ) {
 		//do the thing in the slides where you reduce number of memory accesses
 		//gives diminishing returns though
-		 sum = 0.0;
-	     sum2 = 0.0;
+		 sum = 0.0; sum2 = 0.0;
 
 		for ( c = 0; c < nchannels; c++ ) {
 		  for ( x = 0; x < kernel_order; x++) {
@@ -253,58 +252,58 @@ register float sum2;
   
   }
 
-/*
-int h, w,x, y, c, m;
-__m128 sumVector, imageVector, kernelsVector, product;
-float iv[4], kv[4];
 
+}
 
-  for ( m = 0; m < nkernels; m++ ) {
+void superFastPart2(float *** image, float **** kernels, float *** output,
+			   int width, int height, int nchannels,
+			   int kernel_order, int m){
+	int h, w,x, y, c;
+	float sum1, sum2, sum3, sum4;
 	for ( w = 0; w < width; w++ ) {
-	  for ( h = 0; h < height; h+=4 ) {
+	  for ( h = 0; h < height; h+4 ) {
 		//do the thing in the slides where you reduce number of memory accesses
 		//gives diminishing returns though
-		 sumVector = _mm_setzero_ps();
+		 sum1 = 0.0; sum2 = 0.0; sum3 = 0.0; sum4 = 0.0;
+
 
 		for ( c = 0; c < nchannels; c++ ) {
-		  for ( x = 0; x < kernel_order; x++) {
-			for ( y = 0; y < kernel_order; y++ ) {
-
-			//create a vector from the image matrix
-	 		  	iv[0] = image[w+x][h+y][c]; 
-				iv[1] = image[w+x][h+y+1][c];
-				iv[2] =	image[w+x][h+y+2][c]; 
-				iv[3] = image[w+x][h+y+3][c];
-
-				imageVector = _mm_loadu_ps(iv);
-
-			//create a vector from the kernel matrix
-				kv[0] = kernels[m][c][x][y];
-				kv[1] =	kernels[m][c][x][y];
-				kv[2] =	kernels[m][c][x][y];
-				kv[3] =	kernels[m][c][x][y];
-				kernelsVector = _mm_loadu_ps(kv);
-			//multiply the two vectors (8 floats being multiplied together at once)
-				product = _mm_mul_ps(imageVector, kernelsVector);
-
-				//add the product to a running total
-				sumVector = _mm_add_ps(sumVector, product);
-
+			for ( x = 0; x < kernel_order; x++) {	
+				for ( y = 0; y < kernel_order; y++ ) {
+					
+					sum1 += image[w+x][h+y][c] * kernels[m][c][x][y];
+					sum2 += image[w+x][h+y+1][c] * kernels[m][c][x][y];
+					sum3 += image[w+x][h+y+2][c] * kernels[m][c][x][y];
+					sum4 += image[w+x][h+y+3][c] * kernels[m][c][x][y];
+	
+				}
+				
 			}
-		  }
-		  float sum[4];
-		  _mm_storeu_ps(sum, sumVector);
-		  int i;
-		  for(i = 0; i <  4; i++)
-			  output[m][w][h+i] = sum[i];
+		output[m][w][h] = sum1;
+		output[m][w][h+1] = sum2;
+		output[m][w][h+2] = sum3;
+		output[m][w][h+3] = sum4;
 
 		}
 	  }
 	}
-  }
+  
+  
 
-*/
 }
+
+void superFast(float *** image, float **** kernels, float *** output,
+			   int width, int height, int nchannels, int nkernels,
+			   int kernel_order){
+	int m;
+	#pragma omp parallel for
+	for(m = 0; m < nkernels; m++){
+		superFastPart2(image, kernels, output, width, height, nchannels, kernel_order, m);
+	}
+
+
+}
+
 
 /* the fast version of matmul written by the team */
 void team_conv(float *** image, float **** kernels, float *** output,
@@ -313,16 +312,16 @@ void team_conv(float *** image, float **** kernels, float *** output,
 {
 /*Our version*/
 
-if(width < 50 || nchannels < 4 || nkernels < 4 || kernel_order < 4) team_conv_not_parallel(image, kernels, output, width, height, nchannels, nkernels, kernel_order);
+if(width < 32 || (nchannels < 4 && nkernels < 4 && kernel_order < 4)) team_conv_not_parallel(image, kernels, output, width, height, nchannels, nkernels, kernel_order);
 else if (height % 4 == 0){
 
 printf("Parallel vectors\n");
 
 int h, w,x, y, c, m;
 __m128 sumVector, imageVector, kernelsVector, product;
-float iv[4], kv[4];
+float iv[4];
 
-#pragma omp parallel for private(sumVector, imageVector, kernelsVector, product, iv, kv, h, w,x, y, c, m)
+#pragma omp parallel for private(sumVector, imageVector, kernelsVector, product, iv, h, w,x, y, c, m)
 
   for ( m = 0; m < nkernels; m++ ) {
 	for ( w = 0; w < width; w++ ) {
@@ -343,12 +342,11 @@ float iv[4], kv[4];
 
 				imageVector = _mm_loadu_ps(iv);
 
+
 			//create a vector from the kernel matrix
-				kv[0] = kernels[m][c][x][y];
-				kv[1] =	kernels[m][c][x][y];
-				kv[2] =	kernels[m][c][x][y];
-				kv[3] =	kernels[m][c][x][y];
-				kernelsVector = _mm_loadu_ps(kv);
+
+
+				kernelsVector = _mm_set1_ps(kernels[m][c][x][y]);
 			//multiply the two vectors (8 floats being multiplied together at once)
 				product = _mm_mul_ps(imageVector, kernelsVector);
 
@@ -368,8 +366,9 @@ float iv[4], kv[4];
 	}
   }
 
+//superFast(image, kernels, output, width, height, nchannels, nkernels, kernel_order);
 }
-else{
+else if(height % 2 == 0){
 
 
 int h, w,x, y, c, m;
@@ -404,8 +403,41 @@ register float sum2;
   
   }
 
+}//else
+else{
+int h, w,x, y, c, m;
+register float sum;
+
+#pragma omp parallel for private(h, w, x, y, c, m, sum)
+  for ( m = 0; m < nkernels; m++ ) {
+	for ( w = 0; w < width; w++ ) {
+	  for ( h = 0; h < height; h++ ) {
+		//do the thing in the slides where you reduce number of memory accesses
+		//gives diminishing returns though
+		 sum = 0.0;
+
+
+		for ( c = 0; c < nchannels; c++ ) {
+			for ( x = 0; x < kernel_order; x++) {
+			
+				for ( y = 0; y < kernel_order; y++ ) {
+					
+					  sum += image[w+x][h+y][c] * kernels[m][c][x][y];
+
+				}
+				
+			}
+		output[m][w][h] = sum;
+
+
+		}
+	  }
+	}
+  
+  }
+
 }
-} //else
+} 
 
 
 int main(int argc, char ** argv)
